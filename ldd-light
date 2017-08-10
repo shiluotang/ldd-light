@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+function findPath() {
+    local path=$(which "${1}" 2> /dev/null)
+    if [[ -z ${path} ]]; then
+        path="Not found"
+    fi
+    echo ${path}
+}
+
+function analyzeLibrary() {
+    local library=${1}
+    local dependency=''
+    local dependencies=()
+    IFS=$(echo -ne '\n\b') dependencies=($(objdump -p ${library} | grep -E -e '^[[:space:]]+DLL Name: ' | sed -e 's/.*DLL Name: //g'))
+
+    if pushd $(dirname ${library}) > /dev/null; then
+        echo ${library}
+        for dependency in ${dependencies[@]}
+        do
+            echo -e "\t${dependency} => $(findPath ${dependency})"
+        done
+        popd > /dev/null
+    fi
+}
+
+function main() {
+    local lib=''
+    for lib in "${@}"
+    do
+        if [[ -f ${lib} ]]; then
+            analyzeLibrary ${lib}
+        fi
+    done
+}
+
+main "${@}"
